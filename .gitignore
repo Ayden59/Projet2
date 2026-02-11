@@ -1,0 +1,10 @@
+# Images générées par KMeans
+static/images/kmeans_*
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# Fichiers système Windows
+.DS_Store
+Thumbs.db
