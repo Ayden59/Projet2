@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Projet2 - Galerie</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <header>
+        <h1>Galerie d'images</h1>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <h2>Photos</h2>
+
+            {% if images %}
+            <form method="GET" action="/">
+                <label for="img">Choisir une photo</label>
+                <select id="img" name="img" onchange="this.form.submit()">
+                    {% for img in images %}
+                    <option value="{{ img }}" {% if img==selected %}selected{% endif %}>
+                        {{ img }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% else %}
+            <p class="muted">Ajoute des images dans <code>static/images</code>.</p>
+            {% endif %}
+        </aside>
+
+        <main class="content">
+            <h2>Affichage</h2>
+
+            {% if selected %}
+            <div class="viewer">
+                <img src="{{ url_for('static', filename='images/' ~ selected) }}" alt="{{ selected }}">
+                <p class="caption">{{ selected }}</p>
+            </div>
+            {% else %}
+            <p class="muted">Aucune image à afficher.</p>
+            {% endif %}
+        </main>
+    </div>
+
+</body>
+
+</html>
