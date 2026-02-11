@@ -3,48 +3,77 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Projet2 - Galerie</title>
+    <title>Projet2 - Images</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
 
     <header>
-        <h1>Galerie d'images</h1>
+        <h1>Mon portfolio</h1>
     </header>
 
     <div class="layout">
+
+        <!-- MENU GAUCHE -->
         <aside class="sidebar">
-            <h2>Photos</h2>
+            <h2>Réglages</h2>
 
             {% if images %}
             <form method="GET" action="/">
+
                 <label for="img">Choisir une photo</label>
-                <select id="img" name="img" onchange="this.form.submit()">
+                <select id="img" name="img">
                     {% for img in images %}
                     <option value="{{ img }}" {% if img==selected %}selected{% endif %}>
                         {{ img }}
                     </option>
                     {% endfor %}
                 </select>
+
+                <label for="algo" style="margin-top: 1rem;">Algorithme</label>
+                <select id="algo" name="algo">
+                    <option value="original" {% if algo=="original" %}selected{% endif %}>
+                        Original
+                    </option>
+                    <option value="kmeans" {% if algo=="kmeans" %}selected{% endif %}>
+                        KMeans (couleurs)
+                    </option>
+                </select>
+
+                <label for="k" style="margin-top: 1rem;">Nombre K</label>
+                <input id="k" type="number" name="k" min="2" max="32" value="{{ k }}">
+
+                <button type="submit" style="margin-top: 1rem;">
+                    Appliquer
+                </button>
+
             </form>
             {% else %}
-            <p class="muted">Ajoute des images dans <code>static/images</code>.</p>
+            <p class="muted">
+                Ajoute des images dans <code>static/images</code>.
+            </p>
             {% endif %}
         </aside>
 
+        <!-- AFFICHAGE DROITE -->
         <main class="content">
             <h2>Affichage</h2>
 
-            {% if selected %}
+            {% if display_image %}
             <div class="viewer">
-                <img src="{{ url_for('static', filename='images/' ~ selected) }}" alt="{{ selected }}">
-                <p class="caption">{{ selected }}</p>
+                <img src="{{ url_for('static', filename='images/' ~ display_image) }}" alt="image sélectionnée">
+                <p class="caption">
+                    {{ selected }}
+                    — <strong>{{ algo }}</strong>
+                    {% if algo == "kmeans" %}(K={{ k }}){% endif %}
+                </p>
             </div>
             {% else %}
             <p class="muted">Aucune image à afficher.</p>
             {% endif %}
         </main>
+
     </div>
 
 </body>
