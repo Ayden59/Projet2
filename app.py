@@ -6,61 +6,71 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-IMAGE_FOLDER = os.path.join("static", "images")
+# Choisis un dossier racine chez l'utilisateur (à adapter)
+BASE_PHOTOS_DIR = os.path.join(os.path.expanduser("~"), "Pictures")
+
 ALLOWED_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp")
 
 
-def list_images():
-    if not os.path.exists(IMAGE_FOLDER):
+def list_folders(base_dir: str):
+    if not os.path.exists(base_dir):
+        return []
+    folders = []
+    for name in os.listdir(base_dir):
+        p = os.path.join(base_dir, name)
+        if os.path.isdir(p):
+            folders.append(name)
+    folders.sort()
+    return folders
+
+
+def list_images_in_folder(folder_path: str):
+    if not folder_path or not os.path.exists(folder_path):
         return []
     images = []
-    for f in os.listdir(IMAGE_FOLDER):
+    for f in os.listdir(folder_path):
         if f.lower().endswith(ALLOWED_EXT) and not f.startswith("kmeans_"):
             images.append(f)
     images.sort()
     return images
 
 
-def kmeans_color_position(filename, k, pos_weight=0.4):
-    # 1) Lire l'image + réduire (rapide)
-    path = os.path.join(IMAGE_FOLDER, filename)
+def kmeans_color_only(folder_path: str, filename: str, k: int):
+    path = os.path.join(folder_path, filename)
     img = Image.open(path).convert("RGB")
     img.thumbnail((500, 500))
 
-    data = np.array(img)         # (h,w,3)
+    data = np.array(img)
     h, w, _ = data.shape
+    pixels = data.reshape(-1, 3).astype(np.float32)
 
-    # 2) Construire les features [R,G,B,x,y]
-    rgb = data.reshape(-1, 3).astype(np.float32)  # N x 3
-
-    yy, xx = np.mgrid[0:h, 0:w]                   # grilles de coordonnées
-    x = (xx.reshape(-1, 1) / max(1, w - 1)).astype(np.float32)  # N x 1 (0..1)
-    y = (yy.reshape(-1, 1) / max(1, h - 1)).astype(np.float32)  # N x 1 (0..1)
-
-    xy = np.hstack([x, y]) * 255.0 * pos_weight   # mise à l'échelle
-    features = np.hstack([rgb, xy])               # N x 5
-
-    # 3) KMeans + reconstruction (couleurs des centres)
     km = KMeans(n_clusters=k, n_init="auto", random_state=0)
-    labels = km.fit_predict(features)             # N
+    labels = km.fit_predict(pixels)
 
-    centers_rgb = km.cluster_centers_[:, :3]      # K x 3 (on garde juste RGB)
-    new_rgb = centers_rgb[labels].reshape(h, w, 3)
-    new_rgb = np.clip(new_rgb, 0, 255).astype(np.uint8)
+    centers = km.cluster_centers_
+    new_pixels = centers[labels].reshape(h, w, 3)
+    new_image = np.clip(new_pixels, 0, 255).astype(np.uint8)
 
-    # 4) Sauvegarde
-    out_name = f"kmeans_xy_k{k}_{os.path.splitext(filename)[0]}.png"
-    out_path = os.path.join(IMAGE_FOLDER, out_name)
-    Image.fromarray(new_rgb).save(out_path)
+    out_name = f"kmeans_k{k}_{os.path.splitext(filename)[0]}.png"
+    out_path = os.path.join(folder_path, out_name)
+    Image.fromarray(new_image).save(out_path)
 
     return out_name
 
 
 @app.route("/")
 def home():
-    images = list_images()
+    folders = list_folders(BASE_PHOTOS_DIR)
+    selected_folder = request.args.get("folder")
 
-    selected = request.args.get("img")
+    # dossier sélectionné par défaut
+    if (not selected_folder) and folders:
+        selected_folder = folders[0]
+
+    folder_path = os.path.join(BASE_PHOTOS_DIR, selected_folder) if selected_folder else None
+    images = list_images_in_folder(folder_path) if folder_path else []
+
+    selected_img = request.args.get("img")
     algo = request.args.get("algo", "original")
     k = request.args.get("k", 6)
 
@@ -70,22 +80,49 @@ def home():
         k = 6
     k = max(2, min(k, 32))
 
-    if (not selected) and images:
-        selected = images[0]
+    if (not selected_img) and images:
+        selected_img = images[0]
 
-    display_image = selected
+    display_image = selected_img
 
-    if selected and algo == "kmeans":
-        display_image = kmeans_color_position(selected, k, pos_weight=0.4)
+    # IMPORTANT : ici on écrit l'image générée dans le dossier photos de l'utilisateur
+    if folder_path and selected_img and algo == "kmeans":
+        display_image = kmeans_color_only(folder_path, selected_img, k)
 
+    # Pour afficher l'image dans le navigateur, on ne peut afficher que ce que Flask "sert".
+    # Donc: on ne peut PAS directement servir un fichier arbitraire du disque sans une route dédiée.
+    # On va passer par une route /photo?folder=...&img=...
     return render_template(
         "home.html",
+        base_dir=BASE_PHOTOS_DIR,
+        folders=folders,
+        folder=selected_folder,
         images=images,
-        selected=selected,
+        selected=selected_img,
         algo=algo,
         k=k,
         display_image=display_image
     )
+
+
+@app.route("/photo")
+def photo():
+    # Sert un fichier depuis BASE_PHOTOS_DIR / folder / img
+    from flask import send_file, abort
+
+    folder = request.args.get("folder", "")
+    img = request.args.get("img", "")
+
+    # sécurité: on n'autorise que les sous-dossiers de BASE_PHOTOS_DIR
+    folder_path = os.path.join(BASE_PHOTOS_DIR, folder)
+    if not os.path.isdir(folder_path):
+        return abort(404)
+
+    file_path = os.path.join(folder_path, img)
+    if not os.path.isfile(file_path):
+        return abort(404)
+
+    return send_file(file_path)
 
 
 if __name__ == "__main__":

@@ -19,10 +19,21 @@
         <aside class="sidebar">
             <h2>Réglages</h2>
 
-            {% if images %}
+            {% if folders %}
             <form method="GET" action="/">
 
-                <label for="img">Choisir une photo</label>
+                <!-- Choix du dossier -->
+                <label for="folder">Dossier</label>
+                <select id="folder" name="folder" onchange="this.form.submit()">
+                    {% for f in folders %}
+                    <option value="{{ f }}" {% if f==folder %}selected{% endif %}>
+                        {{ f }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <!-- Choix image -->
+                <label for="img" style="margin-top: 1rem;">Image</label>
                 <select id="img" name="img">
                     {% for img in images %}
                     <option value="{{ img }}" {% if img==selected %}selected{% endif %}>
@@ -31,6 +42,7 @@
                     {% endfor %}
                 </select>
 
+                <!-- Choix algorithme -->
                 <label for="algo" style="margin-top: 1rem;">Algorithme</label>
                 <select id="algo" name="algo">
                     <option value="original" {% if algo=="original" %}selected{% endif %}>
@@ -41,8 +53,9 @@
                     </option>
                 </select>
 
+                <!-- Nombre K -->
                 <label for="k" style="margin-top: 1rem;">Nombre K</label>
-                <input id="k" type="number" name="k" min="2" max="32" value="{{ k }}">
+                <input type="number" id="k" name="k" min="2" max="32" value="{{ k }}">
 
                 <button type="submit" style="margin-top: 1rem;">
                     Appliquer
@@ -50,28 +63,29 @@
 
             </form>
             {% else %}
-            <p class="muted">
-                Ajoute des images dans <code>static/images</code>.
-            </p>
+            <p class="muted">Aucun dossier trouvé.</p>
             {% endif %}
+
         </aside>
 
-        <!-- AFFICHAGE DROITE -->
+        <!-- AFFICHAGE IMAGE -->
         <main class="content">
             <h2>Affichage</h2>
 
-            {% if display_image %}
+            {% if display_image and folder %}
             <div class="viewer">
-                <img src="{{ url_for('static', filename='images/' ~ display_image) }}" alt="image sélectionnée">
+                <img src="{{ url_for('photo') }}?folder={{ folder }}&img={{ display_image }}" alt="Image sélectionnée">
+
                 <p class="caption">
                     {{ selected }}
                     — <strong>{{ algo }}</strong>
-                    {% if algo == "kmeans" %}(K={{ k }}){% endif %}
+                    {% if algo == "kmeans" %} (K={{ k }}){% endif %}
                 </p>
             </div>
             {% else %}
             <p class="muted">Aucune image à afficher.</p>
             {% endif %}
+
         </main>
 
     </div>
