@@ -73,7 +73,7 @@
                     <label for="eps" style="margin-top: 1rem;">eps (DBSCAN)</label>
                     <input type="number" id="eps" name="eps" step="0.1" value="{{ eps }}">
 
-                    <!-- AJOUT : choix d'une seule classe -->
+                    <!-- Choix d'une seule classe -->
                     <label for="selected_class" style="margin-top: 1rem;">Afficher une seule classe</label>
                     <select id="selected_class" name="selected_class">
                         <option value="" {% if selected_class is none %}selected{% endif %}>Toutes</option>
@@ -111,13 +111,18 @@
                     — <strong>{{ algo }}</strong>
                     {% if algo == "kmeans" %} (K={{ k }}){% endif %}
                     {% if algo == "hclust" %} (K={{ k }}){% endif %}
+
                     {% if algo == "dbscan" %}
-                    (min_samples={{ min_samples }},
-                    eps={{ eps }},
-                    K trouvé={{ n_clusters }},
-                    classes={{ classes }},
-                    bruit={{ n_noise }}
-                    {% if selected_class is not none %}, classe affichée={{ selected_class }}{% endif %})
+                    <span class="dbscan-meta">
+                        <span class="dbscan-label">min_samples</span><code>{{ min_samples }}</code>
+                        <span class="dbscan-label">eps</span><code>{{ eps }}</code>
+                        <span class="dbscan-label">K</span><code>{{ n_clusters }}</code>
+                        <span class="dbscan-label">classes</span><code>{{ classes }}</code>
+                        <span class="dbscan-label">bruit</span><code>{{ n_noise }}</code>
+                        {% if selected_class is not none %}
+                        <span class="dbscan-label">classe affichée</span><code>{{ selected_class }}</code>
+                        {% endif %}
+                    </span>
                     {% endif %}
                 </p>
             </div>

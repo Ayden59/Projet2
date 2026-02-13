@@ -84,10 +84,74 @@ button:hover {
     background: #fafafa;
 }
 
+/* --- Amélioration esthétique des résultats DBSCAN (sans casser le reste) --- */
+
 .caption {
     margin-top: 0.8rem;
     color: #555;
     font-size: 0.9rem;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+/* Style "badges" pour les infos affichées dans la caption */
+.caption strong {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    background: #f0e9f7;
+    color: #4b0a7a;
+    font-weight: 700;
+    margin: 0 0.2rem;
+    vertical-align: middle;
+}
+
+/* Si tu entoures tes valeurs de <code> dans le HTML, ça fera des chips propres */
+.caption code {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    background: #f0e9f7;
+    color: #4b0a7a;
+    font-size: 0.85rem;
+    margin: 0.15rem 0.2rem 0;
+    vertical-align: middle;
+    border: 1px solid #e3d6f0;
+}
+
+/* Rendre les longues listes (ex: classes=[0,1,2...]) plus lisibles */
+.caption .dbscan-meta {
+    display: block;
+    margin-top: 0.6rem;
+    padding: 0.9rem 1rem;
+    background: #faf7fe;
+    border: 1px solid #e6d9f7;
+    border-radius: 14px;
+    width: 100%;
+    /* ← prend toute la largeur */
+    box-sizing: border-box;
+}
+
+/* Liste des classes longue */
+.caption .dbscan-meta code {
+    display: block;
+    /* ← devient bloc entier */
+    margin-top: 0.4rem;
+    padding: 0.6rem;
+    border-radius: 10px;
+    background: #f0e9f7;
+    border: 1px solid #e3d6f0;
+    white-space: pre-wrap;
+    /* ← retour à la ligne automatique */
+    word-break: break-word;
+    /* ← évite débordement */
+}
+
+/* Labels petits et discrets si tu choisis de les ajouter (optionnel) */
+.caption .dbscan-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-right: 0.35rem;
 }
 
 .muted {
