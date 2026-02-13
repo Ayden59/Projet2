@@ -1,4 +1,4 @@
-# 🖼️ Image Clustering Web App (Flask)
+# 🖼️ Image Clustering Web App
 
 Application web développée en **Python / Flask** permettant d’appliquer des algorithmes de **clustering de couleurs** sur des images locales.
 
