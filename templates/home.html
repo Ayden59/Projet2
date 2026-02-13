@@ -98,7 +98,8 @@
                     — <strong>{{ algo }}</strong>
                     {% if algo == "kmeans" %} (K={{ k }}){% endif %}
                     {% if algo == "hclust" %} (K={{ k }}){% endif %}
-                    {% if algo == "dbscan" %} (min_samples={{ min_samples }}, eps={{ eps }}){% endif %}
+                    {% if algo == "dbscan" %} (min_samples={{ min_samples }}, eps={{ eps }}, K trouvé={{ n_clusters
+                    }}){% endif %}
                 </p>
             </div>
             {% else %}

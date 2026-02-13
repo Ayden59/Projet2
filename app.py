@@ -110,6 +110,7 @@ def dbscan_color_only(folder_path: str, filename: str, min_samples: int, eps: fl
     DBSCAN sur les pixels RGB.
     - min_samples : nb minimal de voisins
     - eps : rayon en distance euclidienne RGB (0-255)
+    Retourne: (nom_image_sortie, nb_clusters_trouves)
     """
     path = os.path.join(folder_path, filename)
     img = Image.open(path).convert("RGB")
@@ -125,14 +126,15 @@ def dbscan_color_only(folder_path: str, filename: str, min_samples: int, eps: fl
 
     unique = set(labels.tolist())
     clusters = [c for c in unique if c != -1]
+    n_clusters = len(clusters)
 
     out_name = f"dbscan_ms{min_samples}_eps{str(eps).replace('.','p')}_{os.path.splitext(filename)[0]}.png"
     out_path = os.path.join(folder_path, out_name)
 
     # Si aucun cluster : on sauvegarde l'image originale (mais sous un nom dbscan_)
-    if len(clusters) == 0:
+    if n_clusters == 0:
         Image.fromarray(data).save(out_path)
-        return out_name
+        return out_name, 0
 
     # Centres par cluster
     centers = {}
@@ -149,7 +151,7 @@ def dbscan_color_only(folder_path: str, filename: str, min_samples: int, eps: fl
     new_image = np.clip(new_pixels.reshape(h, w, 3), 0, 255).astype(np.uint8)
     Image.fromarray(new_image).save(out_path)
 
-    return out_name
+    return out_name, n_clusters
 # ---------------- FIN DBSCAN ----------------
 
 def safe_subfolder(base: str, folder: str) -> str | None:
@@ -177,7 +179,7 @@ def home():
     k_raw = request.args.get("k", "6")
     linkage = request.args.get("linkage", "ward")
 
-    # DBSCAN params (vrais)
+    # DBSCAN params
     min_samples_raw = request.args.get("min_samples", "6")
     eps_raw = request.args.get("eps", "18.0")
 
@@ -206,6 +208,7 @@ def home():
         selected_img = images[0]
 
     display_image = selected_img
+    n_clusters = None  # <-- AJOUT (pour DBSCAN)
 
     if folder_path and selected_img:
         if algo == "kmeans":
@@ -215,7 +218,9 @@ def home():
                 linkage = "ward"
             display_image = hclust_color_only(folder_path, selected_img, k)
         elif algo == "dbscan":
-            display_image = dbscan_color_only(folder_path, selected_img, min_samples=min_samples, eps=eps)
+            display_image, n_clusters = dbscan_color_only(
+                folder_path, selected_img, min_samples=min_samples, eps=eps
+            )
 
     return render_template(
         "home.html",
@@ -229,6 +234,7 @@ def home():
         display_image=display_image,
         min_samples=min_samples,
         eps=eps,
+        n_clusters=n_clusters,  # <-- AJOUT
     )
 
 @app.route("/photo")
