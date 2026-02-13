@@ -51,6 +51,9 @@
                     <option value="kmeans" {% if algo=="kmeans" %}selected{% endif %}>
                         KMeans (couleurs)
                     </option>
+                    <option value="hclust" {% if algo=="hclust" %} (K={{ k }}){% endif %}>
+                        HClust (hiérarchique)
+                    </option>
                 </select>
 
                 <!-- Nombre K -->
@@ -80,6 +83,7 @@
                     {{ selected }}
                     — <strong>{{ algo }}</strong>
                     {% if algo == "kmeans" %} (K={{ k }}){% endif %}
+                    {% if algo == "hclust" %} (K={{ k }}, linkage={{ linkage }}){% endif %}
                 </p>
             </div>
             {% else %}

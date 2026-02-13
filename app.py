@@ -1,16 +1,13 @@
 import os
 import numpy as np
 from PIL import Image
-from sklearn.cluster import KMeans
-from flask import Flask, render_template, request
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from flask import Flask, render_template, request, send_file, abort
 
 app = Flask(__name__)
 
-# Choisis un dossier racine chez l'utilisateur (à adapter)
 BASE_PHOTOS_DIR = os.path.join(os.path.expanduser("~"), "Pictures")
-
 ALLOWED_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp")
-
 
 def list_folders(base_dir: str):
     if not os.path.exists(base_dir):
@@ -23,17 +20,18 @@ def list_folders(base_dir: str):
     folders.sort()
     return folders
 
-
 def list_images_in_folder(folder_path: str):
     if not folder_path or not os.path.exists(folder_path):
         return []
     images = []
     for f in os.listdir(folder_path):
-        if f.lower().endswith(ALLOWED_EXT) and not f.startswith("kmeans_"):
+        # on exclut les images générées
+        if f.lower().endswith(ALLOWED_EXT) and not (
+            f.startswith("kmeans_") or f.startswith("hclust_")
+        ):
             images.append(f)
     images.sort()
     return images
-
 
 def kmeans_color_only(folder_path: str, filename: str, k: int):
     path = os.path.join(folder_path, filename)
@@ -47,7 +45,7 @@ def kmeans_color_only(folder_path: str, filename: str, k: int):
     km = KMeans(n_clusters=k, n_init="auto", random_state=0)
     labels = km.fit_predict(pixels)
 
-    centers = km.cluster_centers_
+    centers = km.cluster_centers_  # (k,3)
     new_pixels = centers[labels].reshape(h, w, 3)
     new_image = np.clip(new_pixels, 0, 255).astype(np.uint8)
 
@@ -57,26 +55,84 @@ def kmeans_color_only(folder_path: str, filename: str, k: int):
 
     return out_name
 
+def hclust_color_only(folder_path: str, filename: str, k: int):
+
+    path = os.path.join(folder_path, filename)
+    img = Image.open(path).convert("RGB")
+    img.thumbnail((350, 350))  # limite taille
+
+    data = np.array(img, dtype=np.uint8)
+    h, w, _ = data.shape
+
+    pixels = data.reshape(-1, 3).astype(np.float32)
+    n = pixels.shape[0]
+
+    sample_size = 8000
+
+    # ---------- ÉCHANTILLON ----------
+    rng = np.random.default_rng(0)
+
+    if n > sample_size:
+        idx = rng.choice(n, size=sample_size, replace=False)
+        sample = pixels[idx]
+    else:
+        sample = pixels
+
+    # ---------- HCLUST ----------
+    model = AgglomerativeClustering(n_clusters=k, linkage="ward")
+    sample_labels = model.fit_predict(sample)   # ← ÇA MANQUAIT
+
+    # ---------- CENTRES ----------
+    centers = np.zeros((k, 3), dtype=np.float32)
+
+    for i in range(k):
+        mask = (sample_labels == i)
+        if np.any(mask):
+            centers[i] = sample[mask].mean(axis=0)
+        else:
+            centers[i] = sample.mean(axis=0)
+
+    # ---------- RÉASSIGNATION ----------
+    d2 = ((pixels[:, None, :] - centers[None, :, :]) ** 2).sum(axis=2)
+    labels = np.argmin(d2, axis=1)
+
+    new_pixels = centers[labels].reshape(h, w, 3)
+    new_image = np.clip(new_pixels, 0, 255).astype(np.uint8)
+
+    out_name = f"hclust_k{k}_{os.path.splitext(filename)[0]}.png"
+    out_path = os.path.join(folder_path, out_name)
+    Image.fromarray(new_image).save(out_path)
+
+    return out_name
+
+def safe_subfolder(base: str, folder: str) -> str | None:
+    if not folder:
+        return None
+    base_abs = os.path.abspath(base)
+    target_abs = os.path.abspath(os.path.join(base_abs, folder))
+    if os.path.commonpath([base_abs, target_abs]) != base_abs:
+        return None
+    if not os.path.isdir(target_abs):
+        return None
+    return target_abs
 
 @app.route("/")
 def home():
     folders = list_folders(BASE_PHOTOS_DIR)
-    selected_folder = request.args.get("folder")
 
-    # dossier sélectionné par défaut
-    if (not selected_folder) and folders:
-        selected_folder = folders[0]
+    selected_folder = request.args.get("folder", "")
+    folder_path = safe_subfolder(BASE_PHOTOS_DIR, selected_folder)
 
-    folder_path = os.path.join(BASE_PHOTOS_DIR, selected_folder) if selected_folder else None
     images = list_images_in_folder(folder_path) if folder_path else []
 
-    selected_img = request.args.get("img")
-    algo = request.args.get("algo", "original")
-    k = request.args.get("k", 6)
+    selected_img = request.args.get("img", "")
+    algo = request.args.get("algo", "original")  # original | kmeans | hclust
+    k_raw = request.args.get("k", "6")
+    linkage = request.args.get("linkage", "ward")  # utile seulement pour hclust
 
     try:
-        k = int(k)
-    except:
+        k = int(k_raw)
+    except ValueError:
         k = 6
     k = max(2, min(k, 32))
 
@@ -85,13 +141,16 @@ def home():
 
     display_image = selected_img
 
-    # IMPORTANT : ici on écrit l'image générée dans le dossier photos de l'utilisateur
-    if folder_path and selected_img and algo == "kmeans":
-        display_image = kmeans_color_only(folder_path, selected_img, k)
+    # Génère et écrit l'image dans le dossier
+    if folder_path and selected_img:
+        if algo == "kmeans":
+            display_image = kmeans_color_only(folder_path, selected_img, k)
+        elif algo == "hclust":
+            # sécurise linkage
+            if linkage not in ("ward", "average", "complete", "single"):
+                linkage = "ward"
+            display_image = hclust_color_only(folder_path, selected_img, k)
 
-    # Pour afficher l'image dans le navigateur, on ne peut afficher que ce que Flask "sert".
-    # Donc: on ne peut PAS directement servir un fichier arbitraire du disque sans une route dédiée.
-    # On va passer par une route /photo?folder=...&img=...
     return render_template(
         "home.html",
         base_dir=BASE_PHOTOS_DIR,
@@ -101,21 +160,16 @@ def home():
         selected=selected_img,
         algo=algo,
         k=k,
-        display_image=display_image
+        display_image=display_image,
     )
-
 
 @app.route("/photo")
 def photo():
-    # Sert un fichier depuis BASE_PHOTOS_DIR / folder / img
-    from flask import send_file, abort
-
     folder = request.args.get("folder", "")
     img = request.args.get("img", "")
 
-    # sécurité: on n'autorise que les sous-dossiers de BASE_PHOTOS_DIR
-    folder_path = os.path.join(BASE_PHOTOS_DIR, folder)
-    if not os.path.isdir(folder_path):
+    folder_path = safe_subfolder(BASE_PHOTOS_DIR, folder)
+    if not folder_path:
         return abort(404)
 
     file_path = os.path.join(folder_path, img)
