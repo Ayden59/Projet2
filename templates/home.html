@@ -54,11 +54,25 @@
                     <option value="hclust" {% if algo=="hclust" %}selected{% endif %}>
                         HClust (hiérarchique)
                     </option>
+                    <option value="dbscan" {% if algo=="dbscan" %}selected{% endif %}>
+                        DBSCAN (densité)
+                    </option>
                 </select>
 
-                <!-- Nombre K -->
-                <label for="k" style="margin-top: 1rem;">Nombre K</label>
-                <input type="number" id="k" name="k" min="2" max="32" value="{{ k }}">
+                <!-- Paramètres K (KMeans / HClust) -->
+                <div id="k_block">
+                    <label for="k" style="margin-top: 1rem;">Nombre K</label>
+                    <input type="number" id="k" name="k" min="2" max="32" value="{{ k }}">
+                </div>
+
+                <!-- Paramètres DBSCAN -->
+                <div id="dbscan_block">
+                    <label for="min_samples" style="margin-top: 1rem;">min_samples (DBSCAN)</label>
+                    <input type="number" id="min_samples" name="min_samples" min="2" max="64" value="{{ min_samples }}">
+
+                    <label for="eps" style="margin-top: 1rem;">eps (DBSCAN)</label>
+                    <input type="number" id="eps" name="eps" step="0.1" value="{{ eps }}">
+                </div>
 
                 <button type="submit" style="margin-top: 1rem;">
                     Appliquer
@@ -84,6 +98,7 @@
                     — <strong>{{ algo }}</strong>
                     {% if algo == "kmeans" %} (K={{ k }}){% endif %}
                     {% if algo == "hclust" %} (K={{ k }}){% endif %}
+                    {% if algo == "dbscan" %} (min_samples={{ min_samples }}, eps={{ eps }}){% endif %}
                 </p>
             </div>
             {% else %}
@@ -93,6 +108,26 @@
         </main>
 
     </div>
+
+    <script>
+        function updateParamsVisibility() {
+            const algo = document.getElementById("algo").value;
+
+            const kBlock = document.getElementById("k_block");
+            const dbscanBlock = document.getElementById("dbscan_block");
+
+            if (algo === "dbscan") {
+                kBlock.style.display = "none";
+                dbscanBlock.style.display = "block";
+            } else {
+                kBlock.style.display = "block";
+                dbscanBlock.style.display = "none";
+            }
+        }
+
+        document.getElementById("algo").addEventListener("change", updateParamsVisibility);
+        window.addEventListener("load", updateParamsVisibility);
+    </script>
 
 </body>
 

@@ -26,7 +26,7 @@ def list_images_in_folder(folder_path: str):
     images = []
     for f in os.listdir(folder_path):
         if f.lower().endswith(ALLOWED_EXT) and not (
-            f.startswith("kmeans_") or f.startswith("hclust_")
+            f.startswith("kmeans_") or f.startswith("hclust_") or f.startswith("dbscan_")
         ):
             images.append(f)
     images.sort()
@@ -104,6 +104,54 @@ def hclust_color_only(folder_path: str, filename: str, k: int):
 
     return out_name
 
+# ------------------ DBSCAN ------------------
+def dbscan_color_only(folder_path: str, filename: str, min_samples: int, eps: float):
+    """
+    DBSCAN sur les pixels RGB.
+    - min_samples : nb minimal de voisins
+    - eps : rayon en distance euclidienne RGB (0-255)
+    """
+    path = os.path.join(folder_path, filename)
+    img = Image.open(path).convert("RGB")
+    img.thumbnail((350, 350))  # limite taille
+
+    data = np.array(img, dtype=np.uint8)
+    h, w, _ = data.shape
+
+    pixels = data.reshape(-1, 3).astype(np.float32)
+
+    model = DBSCAN(eps=float(eps), min_samples=int(min_samples))
+    labels = model.fit_predict(pixels)  # -1 = bruit
+
+    unique = set(labels.tolist())
+    clusters = [c for c in unique if c != -1]
+
+    out_name = f"dbscan_ms{min_samples}_eps{str(eps).replace('.','p')}_{os.path.splitext(filename)[0]}.png"
+    out_path = os.path.join(folder_path, out_name)
+
+    # Si aucun cluster : on sauvegarde l'image originale (mais sous un nom dbscan_)
+    if len(clusters) == 0:
+        Image.fromarray(data).save(out_path)
+        return out_name
+
+    # Centres par cluster
+    centers = {}
+    for c in clusters:
+        mask = labels == c
+        centers[c] = pixels[mask].mean(axis=0)
+
+    # Recoloration: clusters -> centre, bruit -> pixel original
+    new_pixels = pixels.copy()
+    for c in clusters:
+        mask = labels == c
+        new_pixels[mask] = centers[c]
+
+    new_image = np.clip(new_pixels.reshape(h, w, 3), 0, 255).astype(np.uint8)
+    Image.fromarray(new_image).save(out_path)
+
+    return out_name
+# ---------------- FIN DBSCAN ----------------
+
 def safe_subfolder(base: str, folder: str) -> str | None:
     if not folder:
         return None
@@ -129,18 +177,36 @@ def home():
     k_raw = request.args.get("k", "6")
     linkage = request.args.get("linkage", "ward")
 
+    # DBSCAN params (vrais)
+    min_samples_raw = request.args.get("min_samples", "6")
+    eps_raw = request.args.get("eps", "18.0")
+
+    # K pour kmeans/hclust
     try:
         k = int(k_raw)
     except ValueError:
         k = 6
     k = max(2, min(k, 32))
 
+    # min_samples
+    try:
+        min_samples = int(min_samples_raw)
+    except ValueError:
+        min_samples = 6
+    min_samples = max(2, min(min_samples, 64))
+
+    # eps
+    try:
+        eps = float(eps_raw)
+    except ValueError:
+        eps = 18.0
+    eps = max(0.1, min(eps, 200.0))
+
     if (not selected_img) and images:
         selected_img = images[0]
 
     display_image = selected_img
 
-    # Génère et écrit l'image dans le dossier
     if folder_path and selected_img:
         if algo == "kmeans":
             display_image = kmeans_color_only(folder_path, selected_img, k)
@@ -148,6 +214,8 @@ def home():
             if linkage not in ("ward", "average", "complete", "single"):
                 linkage = "ward"
             display_image = hclust_color_only(folder_path, selected_img, k)
+        elif algo == "dbscan":
+            display_image = dbscan_color_only(folder_path, selected_img, min_samples=min_samples, eps=eps)
 
     return render_template(
         "home.html",
@@ -159,6 +227,8 @@ def home():
         algo=algo,
         k=k,
         display_image=display_image,
+        min_samples=min_samples,
+        eps=eps,
     )
 
 @app.route("/photo")
