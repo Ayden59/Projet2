@@ -106,7 +106,7 @@ def dbscan_color_only(
     filename: str,
     min_samples: int,
     eps: float,
-    selected_class: int | None = None,   # <-- AJOUT
+    selected_class: int | None = None,
 ):
 
     path = os.path.join(folder_path, filename)
@@ -126,7 +126,6 @@ def dbscan_color_only(
     n_clusters = len(classes)
     n_noise = int(np.sum(labels == -1))
 
-    # <-- AJOUT : nom de fichier différent si on filtre une seule classe
     suffix = ""
     if selected_class is not None:
         suffix = f"_class{selected_class}"
@@ -143,12 +142,18 @@ def dbscan_color_only(
         mask = labels == c
         centers[c] = pixels[mask].mean(axis=0)
 
-    # <-- MODIF : affichage filtré (une seule classe) ou toutes
+    # Affichage filtré (une seule classe) ou toutes
     new_pixels = np.zeros_like(pixels)  # fond noir
+
     if selected_class is not None:
-        if selected_class in classes:
+        if selected_class == -1:
+            # Affiche uniquement le bruit
+            mask = labels == -1
+            new_pixels[mask] = np.array([255, 255, 255], dtype=np.float32)
+        elif selected_class in classes:
             mask = labels == selected_class
             new_pixels[mask] = centers[selected_class]
+        # si selected_class invalide -> on laisse l'image noire
     else:
         for c in classes:
             mask = labels == c
@@ -188,7 +193,6 @@ def home():
     min_samples_raw = request.args.get("min_samples", "6")
     eps_raw = request.args.get("eps", "18.0")
 
-    # <-- AJOUT : classe DBSCAN sélectionnée (optionnelle)
     selected_class_raw = request.args.get("selected_class", "")
     try:
         selected_class = int(selected_class_raw) if selected_class_raw != "" else None
@@ -235,7 +239,7 @@ def home():
                 selected_img,
                 min_samples=min_samples,
                 eps=eps,
-                selected_class=selected_class,  # <-- AJOUT
+                selected_class=selected_class,
             )
 
     return render_template(
@@ -253,7 +257,7 @@ def home():
         n_clusters=n_clusters,
         classes=classes,
         n_noise=n_noise,
-        selected_class=selected_class,  # <-- AJOUT (pour le home.html)
+        selected_class=selected_class,
     )
 
 @app.route("/photo")

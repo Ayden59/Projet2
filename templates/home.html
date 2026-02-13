@@ -77,6 +77,10 @@
                     <label for="selected_class" style="margin-top: 1rem;">Afficher une seule classe</label>
                     <select id="selected_class" name="selected_class">
                         <option value="" {% if selected_class is none %}selected{% endif %}>Toutes</option>
+
+                        <!-- AJOUT : afficher le bruit (label -1) -->
+                        <option value="-1" {% if selected_class==-1 %}selected{% endif %}>Bruit (-1)</option>
+
                         {% if classes %}
                         {% for c in classes %}
                         <option value="{{ c }}" {% if selected_class==c %}selected{% endif %}>
