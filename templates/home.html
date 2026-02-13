@@ -72,6 +72,19 @@
 
                     <label for="eps" style="margin-top: 1rem;">eps (DBSCAN)</label>
                     <input type="number" id="eps" name="eps" step="0.1" value="{{ eps }}">
+
+                    <!-- AJOUT : choix d'une seule classe -->
+                    <label for="selected_class" style="margin-top: 1rem;">Afficher une seule classe</label>
+                    <select id="selected_class" name="selected_class">
+                        <option value="" {% if selected_class is none %}selected{% endif %}>Toutes</option>
+                        {% if classes %}
+                        {% for c in classes %}
+                        <option value="{{ c }}" {% if selected_class==c %}selected{% endif %}>
+                            Classe {{ c }}
+                        </option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
                 </div>
 
                 <button type="submit" style="margin-top: 1rem;">
@@ -98,8 +111,14 @@
                     — <strong>{{ algo }}</strong>
                     {% if algo == "kmeans" %} (K={{ k }}){% endif %}
                     {% if algo == "hclust" %} (K={{ k }}){% endif %}
-                    {% if algo == "dbscan" %} (min_samples={{ min_samples }}, eps={{ eps }}, K trouvé={{ n_clusters
-                    }}){% endif %}
+                    {% if algo == "dbscan" %}
+                    (min_samples={{ min_samples }},
+                    eps={{ eps }},
+                    K trouvé={{ n_clusters }},
+                    classes={{ classes }},
+                    bruit={{ n_noise }}
+                    {% if selected_class is not none %}, classe affichée={{ selected_class }}{% endif %})
+                    {% endif %}
                 </p>
             </div>
             {% else %}
