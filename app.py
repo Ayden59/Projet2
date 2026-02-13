@@ -25,7 +25,6 @@ def list_images_in_folder(folder_path: str):
         return []
     images = []
     for f in os.listdir(folder_path):
-        # on exclut les images générées
         if f.lower().endswith(ALLOWED_EXT) and not (
             f.startswith("kmeans_") or f.startswith("hclust_")
         ):
@@ -45,7 +44,7 @@ def kmeans_color_only(folder_path: str, filename: str, k: int):
     km = KMeans(n_clusters=k, n_init="auto", random_state=0)
     labels = km.fit_predict(pixels)
 
-    centers = km.cluster_centers_  # (k,3)
+    centers = km.cluster_centers_
     new_pixels = centers[labels].reshape(h, w, 3)
     new_image = np.clip(new_pixels, 0, 255).astype(np.uint8)
 
@@ -80,7 +79,7 @@ def hclust_color_only(folder_path: str, filename: str, k: int):
 
     # ---------- HCLUST ----------
     model = AgglomerativeClustering(n_clusters=k, linkage="ward")
-    sample_labels = model.fit_predict(sample)   # ← ÇA MANQUAIT
+    sample_labels = model.fit_predict(sample)
 
     # ---------- CENTRES ----------
     centers = np.zeros((k, 3), dtype=np.float32)
@@ -126,9 +125,9 @@ def home():
     images = list_images_in_folder(folder_path) if folder_path else []
 
     selected_img = request.args.get("img", "")
-    algo = request.args.get("algo", "original")  # original | kmeans | hclust
+    algo = request.args.get("algo", "original")
     k_raw = request.args.get("k", "6")
-    linkage = request.args.get("linkage", "ward")  # utile seulement pour hclust
+    linkage = request.args.get("linkage", "ward")
 
     try:
         k = int(k_raw)
@@ -146,7 +145,6 @@ def home():
         if algo == "kmeans":
             display_image = kmeans_color_only(folder_path, selected_img, k)
         elif algo == "hclust":
-            # sécurise linkage
             if linkage not in ("ward", "average", "complete", "single"):
                 linkage = "ward"
             display_image = hclust_color_only(folder_path, selected_img, k)
@@ -177,7 +175,6 @@ def photo():
         return abort(404)
 
     return send_file(file_path)
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5002)
