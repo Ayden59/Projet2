@@ -1,13 +1,15 @@
-# 🖼️ Image Clustering Web App
+# 🎯 Implémentation et comparaison d’algorithmes de clustering sur images
 
-Application web développée en **Python / Flask** permettant d’appliquer des algorithmes de **clustering de couleurs** sur des images locales.
+Application développée en **Python** avec une interface **Flask**, ayant pour objectif principal l’implémentation et l’analyse de deux algorithmes de clustering appliqués à des images.
 
-Le projet permet de comparer deux méthodes de segmentation :
+Ce projet met l’accent sur le travail algorithmique et la comparaison de méthodes de segmentation de couleurs :
 
 - 🔵 **KMeans**
 - 🟣 **HClust** (clustering hiérarchique – méthode Ward)
 
-Les images sont traitées directement depuis le dossier `Pictures` de l'utilisateur et les résultats sont générés dynamiquement.
+Les images sont traitées à partir du dossier `Pictures` de l’utilisateur, et les résultats sont générés dynamiquement afin de visualiser l’impact des différents algorithmes sur la réduction de palette.
+
+L’interface web sert principalement de support expérimental pour tester les paramètres (notamment le nombre de clusters K).
 
 ---
 
