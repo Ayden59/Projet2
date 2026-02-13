@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from PIL import Image
-from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
 from flask import Flask, render_template, request, send_file, abort
 
 app = Flask(__name__)
